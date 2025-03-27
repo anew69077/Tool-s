@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Strength Checker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --background: #ffffff;
+            --text: #1f2937;
+            --border: #e5e7eb;
+        }
+
+        .dark-mode {
+            --primary: #3b82f6;
+            --background: #1f2937;
+            --text: #f3f4f6;
+            --border: #4b5563;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            transition: all 0.3s ease;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 500px;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--border);
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .strength-meter {
+            height: 8px;
+            background-color: var(--border);
+            border-radius: 4px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .strength-bar {
+            height: 100%;
+            width: 0;
+            transition: all 0.5s ease;
+        }
+
+        .copy-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .copy-btn:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+
+        .feedback {
+            margin-top: 1rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .dark-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            background: var(--background);
+            border: 1px solid var(--border);
+        }
+
+        .shake {
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .checkmark {
+            display: inline-block;
+            animation: checkmark 0.5s;
+        }
+
+        @keyframes checkmark {
+            0% { opacity: 0; transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dark-toggle" onclick="toggleDarkMode()">
+            <i id="dark-icon" class="fas fa-moon"></i>
+        </div>
+        
+        <h1>Password Strength Checker</h1>
+        
+        <div class="input-group">
+            <input type="password" 
+                   class="password-input" 
+                   id="password" 
+                   placeholder="Enter your password"
+                   oninput="checkPasswordStrength()">
+            <div class="strength-meter">
+                <div class="strength-bar" id="strength-bar"></div>
+            </div>
+        </div>
+
+        <button class="copy-btn" onclick="copyPassword()">
+            <span id="copy-text">Copy</span>
+            <i id="copy-icon" class="fas fa-copy"></i>
+        </button>
+
+        <div class="feedback" id="feedback">
+            <p id="strength-text"></p>
+            <p id="suggestions"></p>
+        </div>
+    </div>
+
+    <script>
+        let isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            localStorage.setItem('darkMode', isDarkMode);
+            document.getElementById('dark-icon').className = isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
+        }
+
+        function checkPasswordStrength() {
+            const password = document.getElementById('password').value;
+            const result = zxcvbn(password);
+            const strengthBar = document.getElementById('strength-bar');
+            const strengthText = document.getElementById('strength-text');
+            const suggestions = document.getElementById('suggestions');
+
+            // Update strength bar
+            const width = ((result.score + 1) * 25);
+            strengthBar.style.width = `${width}%`;
+            strengthBar.style.backgroundColor = getStrengthColor(result.score);
+
+            // Update text feedback
+            const strengthLabels = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+            strengthText.textContent = `Strength: ${strengthLabels[result.score]}`;
+            suggestions.textContent = result.feedback.suggestions[0] || 'Add special characters and numbers';
+        }
+
+        function getStrengthColor(score) {
+            const colors = ['#ef4444', '#f59e0b', '#eab308', '#84cc16', '#22c55e'];
+            return colors[score] || '#6b7280';
+        }
+
+        async function copyPassword() {
+            const password = document.getElementById('password').value;
+            const copyIcon = document.getElementById('copy-icon');
+            
+            if (!password) {
+                document.getElementById('password').classList.add('shake');
+                setTimeout(() => {
+                    document.getElementById('password').classList.remove('shake');
+                }, 500);
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(password);
+                copyIcon.className = 'fas fa-check checkmark';
+                document.getElementById('copy-text').textContent = 'Copied!';
+                setTimeout(() => {
+                    copyIcon.className = 'fas fa-copy';
+                    document.getElementById('copy-text').textContent = 'Copy';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+        }
+
+        // Initialize dark mode
+        document.body.classList.toggle('dark-mode', isDarkMode);
+        document.getElementById('dark-icon').className = isDarkMode ? 'fas fa-sun' : 'fas fa-moon';
+    </script>
+</body>
+</html>
